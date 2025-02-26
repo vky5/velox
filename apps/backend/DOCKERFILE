@@ -1,0 +1,15 @@
+FROM node:18
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+
+EXPOSE 4000
+
+# Wait for hardhat node to start before running backend
+
+CMD [ "sh", "-c", "sleep 5 && node server.js" ]
+
+

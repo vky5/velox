@@ -1,0 +1,22 @@
+FROM node:18
+
+#setting up working directory
+WORKDIR /app
+
+# Copy the entire project directory into the container
+COPY . .
+
+
+# Install all the dependencies
+RUN npm install
+
+# Expose hardhat network port
+EXPOSE 8545
+
+# Make the script executable
+RUN chmod +x ./devScripts/run-blockchain.docker.sh
+
+# use the script to start hardhat node
+ENTRYPOINT ["/app/devScripts/run-blockchain.docker.sh"]
+
+# now that the hardhat node has started, we need to clean cache and artifacts 
