@@ -7,12 +7,30 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
   },
+  firstName: {
+    type: String,
+  },
+  lastName: {
+    type: String,
+  },
   email: {
     type: String,
     required: [true, "Please enter an email"],
     unique: true,
     lowercase: true,
     validate: [validator.isEmail, "Please enter a valid email"],
+  },
+  phone: {
+    type: String,
+  },
+  address: {
+    type: String,
+  },
+  company: {
+    type: String,
+  },
+  role: {
+    type: String,
   },
   password: {
     type: String,
@@ -33,6 +51,13 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
     select: false,
+  },
+  walletId: {
+    type: String,
+    unique: true,
+    default: function() {
+      return crypto.randomBytes(32).toString('hex');
+    }
   },
 });
 

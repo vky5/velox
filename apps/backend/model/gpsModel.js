@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const gpsSchema = new mongoose.Schema({
-  assetId: {
+  gpsId: {
     type: String,
-    required: [true, 'Asset ID is required'],
-    index: true
+    default: function() {
+      return this._id.toString();
+    }
   },
   latitude: {
     type: Number,
@@ -47,22 +48,22 @@ const gpsSchema = new mongoose.Schema({
 });
 
 // Index for querying locations within a time range
-gpsSchema.index({ assetId: 1, timestamp: -1 });
+gpsSchema.index({ gpsId: 1, timestamp: -1 });
 
 // Index for geospatial queries
 gpsSchema.index({ latitude: 1, longitude: 1 });
 
 // Method to get the latest location for an asset
-gpsSchema.statics.getLatestLocation = function(assetId) {
-  return this.findOne({ assetId })
+gpsSchema.statics.getLatestLocation = function(gpsId) {
+  return this.findOne({ gpsId })
     .sort({ timestamp: -1 })
     .select('latitude longitude timestamp');
 };
 
 // Method to get location history for an asset
-gpsSchema.statics.getLocationHistory = function(assetId, startTime, endTime) {
+gpsSchema.statics.getLocationHistory = function(gpsId, startTime, endTime) {
   return this.find({
-    assetId,
+    gpsId,
     timestamp: {
       $gte: startTime,
       $lte: endTime || Date.now()
@@ -72,4 +73,4 @@ gpsSchema.statics.getLocationHistory = function(assetId, startTime, endTime) {
 
 const GPS = mongoose.model('GPS', gpsSchema);
 
-module.exports = GPS; 
+module.exports = GPS;

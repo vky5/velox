@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>GPS Tracker</h1>
+    
+    <div class="form-group">
+        <label for="gpsId">GPS ID:</label>
+        <input type="text" id="gpsId" required>
+    </div>
+
+    <div class="form-group">
+        <label for="latitude">Latitude:</label>
+        <input type="number" id="latitude" step="any" required>
+    </div>
+
+    <div class="form-group">
+        <label for="longitude">Longitude:</label>
+        <input type="number" id="longitude" step="any" required>
+    </div>
+
+    <button onclick="updateLocation()">Update Location</button>
+
+    <div id="map"></div>
+
+    <script>
+        let currentAsset = null;
+
+        async function loadAssetDetails(gpsId) {
+            try {
+                const response = await fetch(`/api/v1/assets/${gpsId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    currentAsset = data.data.asset;
+                    if (data.data.currentLocation) {
+                        updateMap(
+                            data.data.currentLocation.latitude,
+                            data.data.currentLocation.longitude
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading asset:', error);
+            }
+        }
+
+        async function updateLocation() {
+            const gpsId = document.getElementById('gpsId').value;
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+
+            try {
+                const response = await fetch('/api/v1/assets/location', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ gpsId, latitude, longitude })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    alert('Location updated successfully!');
+                    updateMap(latitude, longitude);
+                    await loadAssetDetails(gpsId); // Reload asset details
+                } else {
+                    alert('Error updating location');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating location');
+            }
+        }
+
+        function updateMap(lat, lng) {
+            // Initialize the map if it hasn't been initialized
+            if (!window.map) {
+                window.map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 12
+                });
+            }
+
+            const position = { lat, lng };
+            window.map.setCenter(position);
+
+            // Add or update marker
+            if (window.marker) {
+                window.marker.setPosition(position);
+            } else {
+                window.marker = new google.maps.Marker({
+                    position,
+                    map: window.map
+                });
+            }
+        }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
+    </script>
+</body>
+</html> 
