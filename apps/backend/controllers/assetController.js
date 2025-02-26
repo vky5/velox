@@ -30,11 +30,20 @@ const createAsset = catchAsync(async (req, res, next) => {
     user: req.user.id
   });
 
+  // Convert asset to plain object and embed location data
+  const assetWithLocation = {
+    ...newAsset.toObject(),
+    location: {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      updatedAt: location.updatedAt
+    }
+  };
+
   res.status(201).json({
     status: 'success',
     data: {
-      asset: newAsset,
-      currentLocation: location
+      asset: assetWithLocation
     }
   });
 });
