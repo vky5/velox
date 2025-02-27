@@ -20,8 +20,11 @@ const createAndSendJWT = (user, res, responseCode) => {
 
   const cookieOptions = {
     expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
     ),
+    // maxAge: 90 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+
+    sameSite: 'lax',
     secure: false, // this will send cookie only in https connection
     httpOnly: true, // browser will recieve the cookie store it and send it back with every request
   };
@@ -31,7 +34,7 @@ const createAndSendJWT = (user, res, responseCode) => {
   res.cookie("jwt", token, cookieOptions);
   user.password = undefined;
   res.status(responseCode).json({
-    status: "success"
+    status: "success",
   });
 };
 
@@ -63,7 +66,7 @@ const login = catchAsync(async (req, res, next) => {
   }
 
   const findUser = await UserModel.findOne({ email: email }).select(
-    "+password"
+    "+password",
   );
   if (!findUser) {
     return next(new AppError("Incorrect email or password", 401));
@@ -81,10 +84,10 @@ const login = catchAsync(async (req, res, next) => {
 // for creating the protected routes
 const validateJWT = catchAsync(async (req, res, next) => {
   // checking if token is present or not
-  
+
   const token = req.cookies.jwt;
-  
-  if (!token) {
+
+  if (!token || token === "") {
     return next(new AppError("You are not logged in!", 401));
   }
 
@@ -100,7 +103,7 @@ const validateJWT = catchAsync(async (req, res, next) => {
 
   if (user.changedPasswordAfter(decoded.iat)) {
     return next(
-      new AppError("User recently changed password! Please log in again", 401)
+      new AppError("User recently changed password! Please log in again", 401),
     );
   }
 
@@ -113,7 +116,7 @@ const restrictsTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
-        new AppError("You are not authorized to access this route", 403)
+        new AppError("You are not authorized to access this route", 403),
       );
     }
 
@@ -136,7 +139,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
   // 3) send it to user's email
 
   const resetURL = `${req.protocol}://${req.get(
-    "host"
+    "host",
   )}/api/v1/auth/resetpassword/${resetToken}`;
 
   const message = `If you have forget your password change your password on the url given at ${resetURL}\nif you didn't forget your password, please ignore this email`;
@@ -211,10 +214,23 @@ const updatePassword = catchAsync(async (req, res, next) => {
   createAndSendJWT(user, res, 200);
 });
 
+// logout
+const logout = catchAsync(async (req, res, next) => {
+  res.cookie("jwt", "", {
+    expires: new Date(Date.now() + 10 * 1000),
+    secure: false,
+    httpOnly: true,
+  });
+  res.status(200).json({
+    status: "success",
+  });
+});
+
 module.exports = {
   signup,
   login,
   validateJWT,
+  logout,
   restrictsTo,
   forgotPassword,
   resetPassword,

@@ -15,4 +15,5 @@ router.patch('/resetpassword/:token', authController.resetPassword); // this is 
 router.patch('/updatepassword', authController.validateJWT, authController.updatePassword)
 
 // router.get('/validate', authController.validateJWT);
+router.post('/logout', authController.logout);
 module.exports = router;
