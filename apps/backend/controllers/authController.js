@@ -22,7 +22,7 @@ const createAndSendJWT = (user, res, responseCode) => {
     expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
     ),
-    // secure: true, // this will send cookie only in https connection
+    secure: false, // this will send cookie only in https connection
     httpOnly: true, // browser will recieve the cookie store it and send it back with every request
   };
 
@@ -31,9 +31,7 @@ const createAndSendJWT = (user, res, responseCode) => {
   res.cookie("jwt", token, cookieOptions);
   user.password = undefined;
   res.status(responseCode).json({
-    status: "success",
-    token,
-    // data: user
+    status: "success"
   });
 };
 
@@ -83,14 +81,9 @@ const login = catchAsync(async (req, res, next) => {
 // for creating the protected routes
 const validateJWT = catchAsync(async (req, res, next) => {
   // checking if token is present or not
-  let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
-  }
-
+  
+  const token = req.cookies.jwt;
+  
   if (!token) {
     return next(new AppError("You are not logged in!", 401));
   }
