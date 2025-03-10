@@ -16,4 +16,5 @@ router.patch('/updatepassword', authController.validateJWT, authController.updat
 
 // router.get('/validate', authController.validateJWT);
 router.post('/logout', authController.logout);
+
 module.exports = router;

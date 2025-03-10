@@ -28,7 +28,7 @@ app.use(morgan("dev"));
 app.use(express.static("public"));
 
 // 2) Routes
-app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/auth", authRouter); // this is for auth routes
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/assets", assetRouter);
 app.use("/api/v1/gps", gpsRouter);
