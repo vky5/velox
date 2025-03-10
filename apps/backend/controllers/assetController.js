@@ -1,113 +1,145 @@
-const Asset = require('../model/assetModel');
-const GPS = require('../model/gpsModel');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/appError');
+const Asset = require("../model/assetModel");
+const GPS = require("../model/gpsModel");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/appError");
+const APIFeatures = require("../utils/apiFeatures");
 
 const createAsset = catchAsync(async (req, res, next) => {
-  // Check if GPS ID already exists in GPS collection
+  // when creating an asset, asset model has the gps id of the the already saved gps
+
   const existingGPS = await GPS.findOne({ gpsId: req.body.gpsId });
 
   if (!existingGPS) {
-    console.log(req.body.gpsId)
-    return next(new AppError('Invalid GPS ID. No GPS device found with this ID.', 400));
+    return next(new AppError("Invalid GPS Id no gps found", 400));
   }
 
-  const newAsset = await Asset.create({
-    ...req.body,
-    owner: req.user.id
+  // if gps is already associated with an asset it cant be used
+
+  const assetFound = await Asset.findOne({
+    gpsId: req.body.gpsId,
   });
 
-  // Set default location to Delhi if no location exists
-  const defaultLocation = {
-    latitude: 28.6139,  // Delhi's coordinates
-    longitude: 77.2090
-  };
+  if (assetFound) {
+    return next(new AppError("An asset is already associated with GPS", 400));
+  }
 
-  const location = existingGPS || await GPS.create({
-    assetId: req.body.gpsId,
-    latitude: defaultLocation.latitude,
-    longitude: defaultLocation.longitude,
-    user: req.user.id
+  // creating an asset with the owner as the req.user from jwt
+  const newAsset = await Asset.create({
+    ...req.body,
+    owner: req.user.id,
+  });
+
+  const GPSData = await GPS.create({
+    latitude: req.body.latitude,
+    longitude: req.body.longitude,
+    altitude: req.body.altitude,
+    assetId: newAsset._id,
+    owner: req.user._id,
   });
 
   res.status(201).json({
-    status: 'success',
+    status: "success",
     data: {
       asset: newAsset,
-      currentLocation: location
-    }
+      currentLocation: GPSData,
+    },
   });
 });
 
+/*
+body{
+  - name
+  - type
+  - gpsId
+  - owner
+  - latitude
+  - longitude
+  - altitude
+}
+
+*/
 const updateAssetLocation = catchAsync(async (req, res, next) => {
-  const { latitude, longitude, gpsId } = req.body;
+  const { latitude, longitude, gpsId, assetId } = req.body;
 
   // First verify the asset belongs to the user
   const asset = await Asset.findOne({ gpsId, owner: req.user.id });
+
   if (!asset) {
-    return next(new AppError('No asset found with that GPS ID', 404));
+    return next(new AppError("No asset found with that GPS ID", 404));
   }
 
   // Create new GPS entry
   const gpsData = await GPS.create({
-    assetId: gpsId,
+    assetId: assetId,
     latitude,
     longitude,
-    user: req.user.id
+    altitude,
+    user: req.user.id,
   });
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
     data: {
-      location: gpsData
-    }
+      location: gpsData,
+    },
   });
 });
 
+// to get list of all locations of a particular asset
 const getAssetWithLocations = catchAsync(async (req, res, next) => {
-  const { gpsId } = req.params;
-  
-  const asset = await Asset.findOne({ 
-    gpsId, 
-    owner: req.user.id 
-  });
+  const { assetid } = req.params;
+
+  // const asset = await Asset.findOneById({
+  //   assetId: assetid,
+  //   owner: req.user.id
+  // });
+
+  // this ensures that the belongs to the owner 
+  const asset = await Asset.findOne({ _id: assetid, user: req.user.id });
 
   if (!asset) {
-    return next(new AppError('No asset found with that GPS ID', 404));
+    return next(new AppError("No asset found with that GPS ID", 404));
   }
 
   // Get latest location
-  const latestLocation = await GPS.getLatestLocation(gpsId);
+  // const latestLocation = await GPS.find({ assetId: assetid })
+  //   .sort({timestamp: -1}) // this is to get the latest location first
+  //   .select("+assetId")
+
+  const features = new APIFeatures(
+    GPS.find({ assetId: assetid }).sort({ timestamp: -1 }, req.query),
+    req.query
+  )
+    .filtering()
+    .pagination(1, 50);
+
+  const locations = await features.query;
 
   res.status(200).json({
-    status: 'success',
+    status: "success",
+    results: locations.length,
     data: {
       asset,
-      currentLocation: latestLocation
-    }
+      locations,
+    },
   });
 });
 
-const getAssets = catchAsync(async (req, res, next) => {
-  const assets = await Asset.find({ owner: req.user.id });
+// get the list of all assets
+const getAllAssets = catchAsync(async (req, res, next) => {
+  const feature = new APIFeatures(Asset.find({ owner: req.user._id }))
+    .pagination()
+    .filtering()
+    .sorting();
 
-  // Get latest locations for all assets
-  const assetsWithLocations = await Promise.all(
-    assets.map(async (asset) => {
-      const latestLocation = await GPS.getLatestLocation(asset.gpsId);
-      return {
-        ...asset.toObject(),
-        currentLocation: latestLocation
-      };
-    })
-  );
+  const allAssets = await feature;
 
   res.status(200).json({
-    status: 'success',
-    results: assets.length,
+    status: "success",
+    results: allAssets.length,
     data: {
-      assets: assetsWithLocations
-    }
+      records: allAssets,
+    },
   });
 });
 
@@ -115,5 +147,5 @@ module.exports = {
   createAsset,
   updateAssetLocation,
   getAssetWithLocations,
-  getAssets
-}; 
+  getAllAssets,
+};

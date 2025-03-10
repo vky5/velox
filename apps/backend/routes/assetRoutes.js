@@ -1,21 +1,15 @@
 const express = require('express');
 const { validateJWT } = require('../controllers/authController');
-const { 
-  createAsset, 
-  updateAssetLocation, 
-  getAssets,
-  getAssetWithLocations 
-} = require('../controllers/assetController');
-
+const assetControllers = require("../controllers/assetController")
 const router = express.Router();
 
 router.use(validateJWT);
 
 router.route('/')
-  .get(getAssets)
-  .post(createAsset);
+  .get(assetControllers.getAllAssets)
+  .post(assetControllers.createAsset);
 
-router.patch('/location', updateAssetLocation);
-router.get('/:gpsId', getAssetWithLocations);
+router.patch('/location', assetControllers.updateAssetLocation);
+router.get('/:assetid', assetControllers.getAssetWithLocations);
 
 module.exports = router; 

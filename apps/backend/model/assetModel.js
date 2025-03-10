@@ -15,7 +15,7 @@ const assetSchema = new mongoose.Schema({
     required: [true, 'GPS ID is required'],
     unique: true
   },
-  owner: {
+  owner: { // parent referencing and 1 : 1 
     type: mongoose.Schema.ObjectId,
     ref: 'UserData',
     required: [true, 'Asset must belong to a user']

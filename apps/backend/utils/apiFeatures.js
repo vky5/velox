@@ -41,9 +41,9 @@ class APIFeatures{
     }
 
 
-    pagination(){
-        const page = this.queryString.page * 1 || 1;
-        const limit = this.queryString.limit * 1 || 20;
+    pagination(defaultPage = 1, defaultLimit = 20){
+        const page = this.queryString.page * 1 || defaultPage; // here we multiplied by 1 so i it is string it converts to number
+        const limit = this.queryString.limit * 1 || defaultLimit;
 
         const skip = (page - 1)*limit;
         this.query = this.query.skip(skip).limit(limit);
